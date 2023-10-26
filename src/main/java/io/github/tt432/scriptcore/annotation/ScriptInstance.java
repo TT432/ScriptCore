@@ -11,5 +11,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface ScriptInstance {
+    /**
+     * "{modid}:{filename}". "scriptcore:test" -> data/scriptcore/scripts/test.{loader};
+     *
+     * @return ResourceLocation
+     */
     String value();
 }

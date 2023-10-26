@@ -2,10 +2,13 @@ package io.github.tt432.scriptcore.resources;
 
 import io.github.tt432.scriptcore.annotation.ScriptClass;
 import io.github.tt432.scriptcore.annotation.ScriptHandlerClass;
+import io.github.tt432.scriptcore.annotation.ScriptInstance;
+import io.github.tt432.scriptcore.factory.ScriptsFactory;
 import io.github.tt432.scriptcore.handler.ScriptHandler;
 import io.github.tt432.scriptcore.util.ScriptInfo;
 import io.github.tt432.scriptcore.util.ScriptWrapperObject;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -19,7 +22,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Type;
 
+import java.lang.annotation.ElementType;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +34,7 @@ import java.util.Map;
  * @author TT432
  */
 @Mod.EventBusSubscriber
+@Slf4j
 public class ScriptsResourceManager extends SimplePreparableReloadListener<Integer> {
     @Getter
     private static ScriptsResourceManager instance;
@@ -38,16 +45,13 @@ public class ScriptsResourceManager extends SimplePreparableReloadListener<Integ
         event.addListener(instance);
     }
 
-    private static final Type SCRIPT_CLASS_ANNO = Type.getType(ScriptClass.class);
-    private static final Type SCRIPT_HANDLER_CLASS_ANNO = Type.getType(ScriptHandlerClass.class);
-
     private boolean loadedHandlers;
 
     @Override
     protected @NotNull Integer prepare(@NotNull ResourceManager resourceManager, @NotNull ProfilerFiller profilerFiller) {
         if (!loadedHandlers) {
             loadedHandlers = true;
-            loadHandlers();
+            prepareData();
         }
 
         return 0;
@@ -67,6 +71,7 @@ public class ScriptsResourceManager extends SimplePreparableReloadListener<Integ
 
     private final Map<Class<?>, Info> scriptClassInfos = new HashMap<>();
     private final Map<String, ScriptHandler<?>> handlers = new HashMap<>();
+    private final Map<Field, String> fields = new HashMap<>();
 
     private final Map<String, Map<ResourceLocation, ScriptInfo>> scripts = new HashMap<>();
 
@@ -89,9 +94,27 @@ public class ScriptsResourceManager extends SimplePreparableReloadListener<Integ
             scriptHandler.loadAllScript("scripts/" + info.path).forEach((rl, script) ->
                     scriptInfo.put(rl, new ScriptInfo(rl, script, new ScriptWrapperObject(scriptHandler.loadAllMethod(script)))));
         });
+
+        fields.forEach((field, scriptName) -> {
+            field.setAccessible(true);
+
+            if (Modifier.isStatic(field.getModifiers())) {
+                try {
+                    field.set(null, ScriptsFactory.createInstance(field.getType(), new ResourceLocation(scriptName)));
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                log.error("@ScriptInstance MUST in static field.");
+            }
+        });
     }
 
-    private void loadHandlers() {
+    private static final Type SCRIPT_CLASS_ANNO = Type.getType(ScriptClass.class);
+    private static final Type SCRIPT_HANDLER_CLASS_ANNO = Type.getType(ScriptHandlerClass.class);
+    private static final Type SCRIPT_INSTANCE_ANNO = Type.getType(ScriptInstance.class);
+
+    private void prepareData() {
         scriptClassInfos.clear();
         handlers.clear();
 
@@ -125,6 +148,21 @@ public class ScriptsResourceManager extends SimplePreparableReloadListener<Integ
                             .newInstance());
                 } catch (ClassNotFoundException | InvocationTargetException | InstantiationException |
                          IllegalAccessException | NoSuchMethodException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            list = allScanDatum.getAnnotations()
+                    .stream()
+                    .filter(a -> SCRIPT_INSTANCE_ANNO.equals(a.annotationType()))
+                    .filter(a -> a.targetType() == ElementType.FIELD)
+                    .toList();
+
+            for (ModFileScanData.AnnotationData annotationData : list) {
+                try {
+                    Class<?> aClass = Class.forName(annotationData.clazz().getClassName());
+                    fields.put(aClass.getDeclaredField(annotationData.memberName()), annotationData.annotationData().get("value").toString());
+                } catch (ClassNotFoundException | NoSuchFieldException e) {
                     e.printStackTrace();
                 }
             }

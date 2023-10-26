@@ -5,6 +5,7 @@ import io.github.tt432.scriptcore.resources.ScriptsResourceManager;
 import io.github.tt432.scriptcore.test.TestScriptClass;
 import io.github.tt432.scriptcore.util.ScriptInfo;
 import io.github.tt432.scriptcore.util.ScriptWrapperObject;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Proxy;
@@ -13,6 +14,10 @@ import java.lang.reflect.Proxy;
  * @author TT432
  */
 public class ScriptsFactory {
+    public static <S> S createInstance(Class<S> scriptClass, ResourceLocation fileName) {
+        return createInstance(scriptClass, fileName.getNamespace(), fileName.getPath());
+    }
+
     @NotNull
     public static <S> S createInstance(Class<S> scriptClass, String namespace, String fileName) {
         ScriptInfo script = ScriptsResourceManager.getInstance().getScript(scriptClass, namespace, fileName);
