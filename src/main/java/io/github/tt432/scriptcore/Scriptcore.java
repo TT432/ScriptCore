@@ -1,7 +1,6 @@
 package io.github.tt432.scriptcore;
 
-import net.minecraftforge.fml.common.Mod;
-
+import net.neoforged.fml.common.Mod;
 
 @Mod(Scriptcore.MOD_ID)
 public class Scriptcore {
