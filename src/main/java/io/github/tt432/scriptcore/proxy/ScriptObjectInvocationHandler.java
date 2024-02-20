@@ -10,14 +10,8 @@ import java.util.Arrays;
 
 /**
  * <pre>{@code
- *
- *  ScriptWrapperObject obj = null; // instance
- *
- *  TestScriptClass test = (TestScriptClass) Proxy.newProxyInstance(
- *      obj.getClass().getClassLoader(),
- *      new Class[]{TestScriptClass.class},
- *      new ScriptObjectInvocationHandler(obj)
- *  );
+ *  // usage
+ *  Reflection.newProxy(scriptClass, new ScriptObjectInvocationHandler(obj));
  * }</pre>
  *
  * @author TT432

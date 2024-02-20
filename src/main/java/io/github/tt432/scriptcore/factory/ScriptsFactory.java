@@ -1,14 +1,12 @@
 package io.github.tt432.scriptcore.factory;
 
+import com.google.common.reflect.Reflection;
 import io.github.tt432.scriptcore.proxy.ScriptObjectInvocationHandler;
 import io.github.tt432.scriptcore.resources.ScriptsResourceManager;
-import io.github.tt432.scriptcore.test.TestScriptClass;
 import io.github.tt432.scriptcore.util.ScriptInfo;
 import io.github.tt432.scriptcore.util.ScriptWrapperObject;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
-
-import java.lang.reflect.Proxy;
 
 /**
  * @author TT432
@@ -29,9 +27,6 @@ public class ScriptsFactory {
             obj = ScriptWrapperObject.EMPTY;
         }
 
-        return (S) Proxy.newProxyInstance(
-                obj.getClass().getClassLoader(),
-                new Class[]{TestScriptClass.class},
-                new ScriptObjectInvocationHandler(obj));
+        return Reflection.newProxy(scriptClass, new ScriptObjectInvocationHandler(obj));
     }
 }
